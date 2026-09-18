@@ -1,0 +1,44 @@
+---
+- name: Provision the tradelive VM
+  hosts: tradelive
+  become: yes
+  become_method: sudo
+  vars_files:
+    - vars/secrets.yml
+  tasks:
+    - name: Install libpam-pwquality
+      package:
+        name: libpam-pwquality
+        state: present
+
+    - name: Enforce a strong password policy
+      lineinfile:
+        path: /etc/pam.d/common-password
+        regexp: pam_pwquality.so
+        state: present
+        line: >-
+          password required pam_pwquality.so minlen=12
+          lcredit=-1 ucredit=-1 dcredit=-1 ocredit=-1 retry=3
+
+    - name: Ensure group developers exists
+      group:
+        name: developers
+        state: present
+
+    - name: Create the user trader
+      user:
+        name: trader
+        shell: /bin/bash
+        password: "{{ trader_hash }}"
+
+    - name: Assign trader to the developers group
+      user:
+        name: trader
+        groups: developers
+        append: yes
+
+    - name: Install my public key for trader
+      authorized_key:
+        user: trader
+        state: present
+        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_ed25519.pub') }}"
