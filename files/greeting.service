@@ -1,0 +1,12 @@
+[Unit]
+Description=The Highly Complicated Greeting Application
+After=network.target
+[Service]
+Group=developers
+WorkingDirectory=/opt/engineering
+ExecStart=/usr/bin/gunicorn --bind 0.0.0.0:5000 --access-logfile - \
+ --error-logfile - wsgi:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+[Install]
+WantedBy=multi-user.target

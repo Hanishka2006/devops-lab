@@ -1,0 +1,52 @@
+
+---
+- name: Deploy the Greeting application
+  hosts: tradelive
+  become: yes
+
+  tasks:
+    - name: Install Flask and Gunicorn
+      apt:
+        name:
+          - python3-flask
+          - gunicorn
+        update_cache: yes
+        state: present
+
+    - name: Create the application directory
+      file:
+        path: /opt/engineering
+        state: directory
+        group: developers
+        mode: '0750'
+
+    - name: Copy the application files
+      copy:
+        src: "files/{{ item }}"
+        dest: "/opt/engineering/{{ item }}"
+        group: developers
+        mode: '0750'
+      loop:
+        - greeting.py
+        - wsgi.py
+      notify: Restart Greeting
+
+    - name: Install the systemd unit file
+      copy:
+        src: files/greeting.service
+        dest: /etc/systemd/system/greeting.service
+        mode: '0644'
+      notify: Restart Greeting
+
+    - name: Start and enable the Greeting service
+      systemd:
+        name: greeting.service
+        daemon_reload: yes
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart Greeting
+      systemd:
+        name: greeting.service
+        state: restarted

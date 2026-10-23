@@ -76,6 +76,7 @@
           Match User trader
           AuthenticationMethods publickey,keyboard-interactive
       notify: Restart SSH
+
     - name: Install a sudoers policy for the developers group
       copy:
         dest: /etc/sudoers.d/developers
@@ -84,10 +85,13 @@
         mode: '0440'
         validate: /usr/sbin/visudo -cf %s
         content: |
-          Cmnd_Alias SERVICE_CMDS = /usr/bin/systemctl status ssh, \
-            /usr/bin/systemctl restart ssh
-          Cmnd_Alias PKG_CMDS = /usr/bin/apt update
-          %developers ALL=(ALL) NOPASSWD: SERVICE_CMDS, PKG_CMDS
+          Cmnd_Alias GREETING_CTL = /usr/bin/systemctl start greeting, \
+            /usr/bin/systemctl stop greeting, \
+            /usr/bin/systemctl restart greeting, \
+            /usr/bin/systemctl status greeting
+          %developers ALL=(root) NOPASSWD: GREETING_CTL, \
+            sudoedit /opt/engineering/greeting.py
+
 
   handlers:
     - name: Restart SSH
