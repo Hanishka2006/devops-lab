@@ -1,0 +1,63 @@
+
+---
+- name: Install Jenkins on the tradelive VM
+  hosts: tradelive
+  become: yes
+
+  tasks:
+    - name: Install Java 21 and helpers
+      apt:
+        name:
+          - openjdk-21-jre
+          - fontconfig
+          - gnupg
+        update_cache: yes
+        state: present
+
+    - name: Make sure the keyrings directory exists
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download the Jenkins repository key
+      get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+        dest: /etc/apt/keyrings/jenkins-keyring.asc
+        mode: '0644'
+
+    - name: Add the Jenkins LTS repository
+      apt_repository:
+        repo: >-
+          deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]
+          https://pkg.jenkins.io/debian-stable binary/
+        filename: jenkins
+        state: present
+
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        update_cache: yes
+        state: present
+
+    - name: Start Jenkins and enable it at boot
+      systemd:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Wait for Jenkins to answer on port 8080
+      wait_for:
+        port: 8080
+        delay: 10
+        timeout: 300
+
+    - name: Read the one-time unlock password
+      command: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_unlock
+      changed_when: false
+
+    - name: Show the unlock password
+      debug:
+        msg: "Unlock password: {{ jenkins_unlock.stdout }}"
+
